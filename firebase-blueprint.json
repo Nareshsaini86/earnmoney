@@ -1,0 +1,228 @@
+{
+  "entities": {
+    "AutomatonNode": {
+      "title": "AutomatonNode",
+      "description": "A registered Conway Automaton agent configuration, Base wallet address, and earnings/burn summary.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the automaton agent."
+        },
+        "walletAddress": {
+          "type": "string",
+          "description": "Optional Base/Ethereum 0x wallet address for on-chain USDC tracking."
+        },
+        "monetizationModel": {
+          "type": "string",
+          "enum": ["X402_API", "TASK_BOUNTY", "SKILL_SERVICE", "DATA_SCRAPER"],
+          "description": "Primary revenue generation strategy."
+        },
+        "genesisPrompt": {
+          "type": "string",
+          "description": "The survival and monetization genesis prompt."
+        },
+        "survivalTier": {
+          "type": "string",
+          "enum": ["THRIVING", "NORMAL", "LOW_COMPUTE", "CRITICAL"],
+          "description": "Current economic health tier of the automaton."
+        },
+        "earnedUsdc": {
+          "type": "number",
+          "description": "Cumulative USDC revenue recorded for this node."
+        },
+        "computeBurnUsdc": {
+          "type": "number",
+          "description": "Cumulative compute and LLM inference burn in USDC."
+        },
+        "endpointUrl": {
+          "type": "string",
+          "description": "Optional x402 API or health endpoint URL."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether the automaton node is currently active."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "monetizationModel",
+        "genesisPrompt",
+        "survivalTier",
+        "earnedUsdc",
+        "computeBurnUsdc",
+        "active",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "RevenueEvent": {
+      "title": "RevenueEvent",
+      "description": "An individual monetization earning or compute burn entry recorded for an Automaton.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "automatonId": {
+          "type": "string",
+          "description": "ID of the associated AutomatonNode."
+        },
+        "automatonName": {
+          "type": "string",
+          "description": "Denormalized name of the associated AutomatonNode."
+        },
+        "sourceChannel": {
+          "type": "string",
+          "enum": ["X402_MICROPAYMENT", "BOUNTY_PAYOUT", "SKILL_LICENSE", "COMPUTE_BURN"],
+          "description": "Revenue or expense channel."
+        },
+        "entryType": {
+          "type": "string",
+          "enum": ["EARNING", "BURN"],
+          "description": "Whether this entry increases earnings or represents compute cost."
+        },
+        "amountUsdc": {
+          "type": "number",
+          "description": "Amount in USDC."
+        },
+        "usdToInrRate": {
+          "type": "number",
+          "description": "Live USD to INR exchange rate used at entry time."
+        },
+        "amountInr": {
+          "type": "number",
+          "description": "Converted INR value."
+        },
+        "txReference": {
+          "type": "string",
+          "description": "Optional Base tx hash or x402 invoice reference."
+        },
+        "note": {
+          "type": "string",
+          "description": "Short description of the task or micropayment."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "automatonId",
+        "automatonName",
+        "sourceChannel",
+        "entryType",
+        "amountUsdc",
+        "usdToInrRate",
+        "amountInr",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WithdrawalRequest": {
+      "title": "WithdrawalRequest",
+      "description": "A user-initiated INR or Base USDC payout request and settlement tracker.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "destinationType": {
+          "type": "string",
+          "enum": ["UPI", "BANK_IMPS", "BASE_USDC"],
+          "description": "Payout rail type."
+        },
+        "destinationLabel": {
+          "type": "string",
+          "description": "UPI ID, masked bank account, or 0x wallet address."
+        },
+        "beneficiaryName": {
+          "type": "string",
+          "description": "Account holder or recipient label."
+        },
+        "amountInr": {
+          "type": "number",
+          "description": "Withdrawal amount in Indian Rupees (INR)."
+        },
+        "amountUsdcEquivalent": {
+          "type": "number",
+          "description": "Equivalent USDC amount at request FX rate."
+        },
+        "usdToInrRate": {
+          "type": "number",
+          "description": "FX rate used for conversion."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["REQUESTED", "PROCESSING", "SETTLED", "CANCELLED"],
+          "description": "Lifecycle state of the payout request."
+        },
+        "referenceCode": {
+          "type": "string",
+          "description": "Human-readable payout reference code."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "destinationType",
+        "destinationLabel",
+        "beneficiaryName",
+        "amountInr",
+        "amountUsdcEquivalent",
+        "usdToInrRate",
+        "status",
+        "referenceCode",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/automatons/{automatonId}": {
+      "schema": { "$ref": "#/entities/AutomatonNode" },
+      "description": "User-scoped Conway Automaton agent configurations and live telemetry."
+    },
+    "/users/{userId}/revenueEvents/{eventId}": {
+      "schema": { "$ref": "#/entities/RevenueEvent" },
+      "description": "User-scoped monetization earnings and compute burn ledger entries."
+    },
+    "/users/{userId}/withdrawals/{withdrawalId}": {
+      "schema": { "$ref": "#/entities/WithdrawalRequest" },
+      "description": "User-scoped INR/USDC withdrawal requests and settlement history."
+    }
+  }
+}

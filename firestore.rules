@@ -1,0 +1,160 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidAutomatonNode(data, userId) {
+      return data.userId == userId &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 60 &&
+        (!('walletAddress' in data) || (data.walletAddress is string && data.walletAddress.size() <= 64)) &&
+        data.monetizationModel in ['X402_API', 'TASK_BOUNTY', 'SKILL_SERVICE', 'DATA_SCRAPER'] &&
+        data.genesisPrompt is string && data.genesisPrompt.size() >= 10 && data.genesisPrompt.size() <= 4000 &&
+        data.survivalTier in ['THRIVING', 'NORMAL', 'LOW_COMPUTE', 'CRITICAL'] &&
+        data.earnedUsdc is number && data.earnedUsdc >= 0 &&
+        data.computeBurnUsdc is number && data.computeBurnUsdc >= 0 &&
+        (!('endpointUrl' in data) || (data.endpointUrl is string && data.endpointUrl.size() <= 250)) &&
+        data.active is bool &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidRevenueEvent(data, userId) {
+      return data.userId == userId &&
+        data.automatonId is string && isValidId(data.automatonId) &&
+        data.automatonName is string && data.automatonName.size() >= 1 && data.automatonName.size() <= 60 &&
+        data.sourceChannel in ['X402_MICROPAYMENT', 'BOUNTY_PAYOUT', 'SKILL_LICENSE', 'COMPUTE_BURN'] &&
+        data.entryType in ['EARNING', 'BURN'] &&
+        data.amountUsdc is number && data.amountUsdc > 0 && data.amountUsdc <= 1000000 &&
+        data.usdToInrRate is number && data.usdToInrRate > 0 && data.usdToInrRate <= 1000 &&
+        data.amountInr is number && data.amountInr > 0 && data.amountInr <= 100000000 &&
+        (!('txReference' in data) || (data.txReference is string && data.txReference.size() <= 128)) &&
+        (!('note' in data) || (data.note is string && data.note.size() <= 240)) &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidWithdrawalRequest(data, userId) {
+      return data.userId == userId &&
+        data.destinationType in ['UPI', 'BANK_IMPS', 'BASE_USDC'] &&
+        data.destinationLabel is string && data.destinationLabel.size() >= 3 && data.destinationLabel.size() <= 120 &&
+        data.beneficiaryName is string && data.beneficiaryName.size() >= 2 && data.beneficiaryName.size() <= 80 &&
+        data.amountInr is number && data.amountInr >= 100 && data.amountInr <= 10000000 &&
+        data.amountUsdcEquivalent is number && data.amountUsdcEquivalent > 0 && data.amountUsdcEquivalent <= 1000000 &&
+        data.usdToInrRate is number && data.usdToInrRate > 0 && data.usdToInrRate <= 1000 &&
+        data.status in ['REQUESTED', 'PROCESSING', 'SETTLED', 'CANCELLED'] &&
+        data.referenceCode is string && data.referenceCode.size() >= 4 && data.referenceCode.size() <= 40 &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get, list: if false;
+
+      match /automatons/{automatonId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(automatonId);
+        allow create: if isOwner(userId) &&
+                         isValidId(automatonId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'name', 'monetizationModel', 'genesisPrompt',
+                           'survivalTier', 'earnedUsdc', 'computeBurnUsdc', 'active',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'name', 'walletAddress', 'monetizationModel', 'genesisPrompt',
+                           'survivalTier', 'earnedUsdc', 'computeBurnUsdc', 'endpointUrl', 'active',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidAutomatonNode(incoming(), userId);
+        allow update: if isOwner(userId) &&
+                         isValidId(automatonId) &&
+                         isValidAutomatonNode(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'name', 'walletAddress', 'monetizationModel', 'genesisPrompt',
+                           'survivalTier', 'earnedUsdc', 'computeBurnUsdc', 'endpointUrl',
+                           'active', 'updatedAt'
+                         ]);
+        allow delete: if isOwner(userId) && isValidId(automatonId);
+      }
+
+      match /revenueEvents/{eventId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(eventId);
+        allow create: if isOwner(userId) &&
+                         isValidId(eventId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'automatonId', 'automatonName', 'sourceChannel',
+                           'entryType', 'amountUsdc', 'usdToInrRate', 'amountInr',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'automatonId', 'automatonName', 'sourceChannel',
+                           'entryType', 'amountUsdc', 'usdToInrRate', 'amountInr',
+                           'txReference', 'note', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidRevenueEvent(incoming(), userId);
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(eventId);
+      }
+
+      match /withdrawals/{withdrawalId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId) && isValidId(withdrawalId);
+        allow create: if isOwner(userId) &&
+                         isValidId(withdrawalId) &&
+                         incoming().status == 'REQUESTED' &&
+                         incoming().keys().hasAll([
+                           'userId', 'destinationType', 'destinationLabel', 'beneficiaryName',
+                           'amountInr', 'amountUsdcEquivalent', 'usdToInrRate',
+                           'status', 'referenceCode', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'destinationType', 'destinationLabel', 'beneficiaryName',
+                           'amountInr', 'amountUsdcEquivalent', 'usdToInrRate',
+                           'status', 'referenceCode', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidWithdrawalRequest(incoming(), userId);
+        allow update: if isOwner(userId) &&
+                         isValidId(withdrawalId) &&
+                         isValidWithdrawalRequest(incoming(), userId) &&
+                         existing().status in ['REQUESTED', 'PROCESSING'] &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().amountInr == existing().amountInr &&
+                         incoming().destinationType == existing().destinationType &&
+                         incoming().destinationLabel == existing().destinationLabel &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) &&
+                         (
+                           (existing().status == 'REQUESTED' && incoming().status in ['PROCESSING', 'SETTLED', 'CANCELLED']) ||
+                           (existing().status == 'PROCESSING' && incoming().status in ['SETTLED', 'CANCELLED'])
+                         );
+        allow delete: if false;
+      }
+    }
+  }
+}

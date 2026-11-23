@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Automaton Desk</string>
+    <string name="sign_in_headline">Conway Automaton Desk</string>
+    <string name="sign_in_subtitle">Verify Conway-Research/automaton setup steps, generate Gemini genesis prompts, track live Base USDC to INR revenue, and manage payouts.</string>
+    <string name="sign_in_button">Sign in with Google</string>
+    <string name="nav_setup">Setup</string>
+    <string name="nav_studio">AI Studio</string>
+    <string name="nav_revenue">Revenue</string>
+    <string name="nav_payouts">Payouts</string>
+    <string name="payout_disclosure">Payout requests are persisted in your secure Firestore settlement ledger. Live UPI/IMPS bank transfers require connecting a licensed payment processor (e.g. RazorpayX) or settling on-chain Base USDC.</string>
+</resources>

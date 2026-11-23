@@ -1,0 +1,6 @@
+{
+  "name": "Automaton Desk",
+  "description": "Conway Automaton setup guide, Gemini genesis prompt studio, live Base USDC to INR revenue dashboard, and payout ledger.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
